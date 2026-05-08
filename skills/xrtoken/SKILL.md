@@ -1,7 +1,7 @@
 ---
 name: xrtoken
 description: "Generate images and videos via XRToken API (OpenAI-compatible). Use when creating AI-generated images, videos, or checking available models on xrtoken.ai. Requires XRTOKEN_API_KEY and XRTOKEN_BASE_URL env vars."
-version: 1.0.0
+version: 1.0.1
 author: XRToken
 license: MIT
 prerequisites:
