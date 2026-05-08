@@ -5,6 +5,7 @@ const { clientFromOpts } = require('../lib/client');
 const { autoRoleImages, buildContent, toUrl } = require('../lib/multimodal');
 const { extractFromPrompt, mergeWithExplicit } = require('../lib/nl-extract');
 const { pickVideoModel } = require('../lib/model-route');
+const { validatePrompt, formatReport } = require('../lib/prompt-check');
 const tasks = require('../lib/tasks');
 const log = require('../lib/log');
 
@@ -58,6 +59,16 @@ module.exports = async function videoCreate(opts) {
     draft: merged.draft,
     serviceTier: merged.serviceTier,
   });
+
+  if (asBool(opts.strictPrompt)) {
+    const report = validatePrompt(opts.prompt, { model });
+    if (report.fails.length || report.warns.length) {
+      log.warn(formatReport(report));
+    }
+    if (report.fails.length) {
+      throw new Error(`prompt failed strict-prompt checks (${report.fails.length} fail). Rewrite via seedance-prompt skill, or pass --no-strict-prompt to bypass.`);
+    }
+  }
 
   const content = buildContent({
     prompt: opts.prompt,
@@ -186,6 +197,10 @@ Misc:
   --wait                       Block until done; auto-download result
   --poll-seconds <n>           Polling interval when --wait (default 10)
   --timeout-seconds <n>        Total wait cap when --wait (default 1800)
+  --strict-prompt              Validate against the seedance-prompt skill rules
+                               (banned fast-motion words, length, shot keyword,
+                               quality anchor, face constraint). Hard failures
+                               abort submission with a clear message.
   --dry-run                    Print request body, don't call API
   --json                       Raw JSON output
 `;

@@ -1,7 +1,7 @@
 ---
 name: xrtoken
 description: "XRToken AI 图像/视频生成 Skill。支持文生图/图生图、文生视频/图生视频/参考视频音频/首尾帧。当用户说\"生图\"、\"画图\"、\"生视频\"、\"生成视频\"、\"做个视频\"、\"seedance\"、\"seedream\"、\"xrtoken\" 时激活。OpenAI 兼容网关，50+ 模型。"
-version: 2.2.1
+version: 2.3.0
 author: XRToken
 license: MIT
 prerequisites:
@@ -72,6 +72,7 @@ node scripts/xrtoken.js asset  create --name ref-01 --image-file path.jpg
 | `--callback-url` | url | — | 任务完成回调 |
 | `--safety-identifier` | string | — | 终端用户标识（≤64 字符） |
 | `--wait` | bool | false | 阻塞等待完成并自动下载 |
+| `--strict-prompt` | bool | false | 用 seedance-prompt 规则校验 prompt（违规词、长度、镜头、画质锚词、人脸约束）；硬违规直接拒绝提交 |
 | `--poll-seconds` | int | 10 | `--wait` 时轮询间隔 |
 | `--timeout-seconds` | int | 1800 | `--wait` 时总超时 |
 | `--api-key` | string | — | 覆盖凭据查找 |

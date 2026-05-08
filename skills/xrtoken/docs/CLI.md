@@ -75,6 +75,10 @@ Misc:
   --wait                       Block until done; auto-download result
   --poll-seconds <n>           Polling interval when --wait (default 10)
   --timeout-seconds <n>        Total wait cap when --wait (default 1800)
+  --strict-prompt              Validate against the seedance-prompt skill rules
+                               (banned fast-motion words, length, shot keyword,
+                               quality anchor, face constraint). Hard failures
+                               abort submission with a clear message.
   --dry-run                    Print request body, don't call API
   --json                       Raw JSON output
 ```
