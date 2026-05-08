@@ -98,19 +98,95 @@ Supports `asset://` URIs for registered assets.
 
 Async. Returns a task ID — poll for results.
 
+#### Request parameters
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `model` | string | ✓ | — | Video model ID, e.g. `volcengine/doubao-seedance-2-0-260128` |
+| `content` | array | ✓ | — | Multimodal input array (see schema below) |
+| `resolution` | string | ✗ | `720p` | `480p` / `720p` / `1080p` |
+| `ratio` | string | ✗ | `adaptive` | `16:9` / `4:3` / `1:1` / `3:4` / `9:16` / `21:9` / `adaptive` |
+| `duration` | integer | ✗ | `5` | Output length in seconds (range varies by model) |
+| `seed` | integer | ✗ | `-1` | `-1` to `2^32-1`; `-1` = random |
+| `generate_audio` | boolean | ✗ | `true` | Generate matching audio (audio-capable models only) |
+| `return_last_frame` | boolean | ✗ | `false` | Include `last_frame_url` in result |
+| `camera_fixed` | boolean | ✗ | `false` | Lock camera position |
+| `watermark` | boolean | ✗ | `false` | Add provider watermark |
+| `service_tier` | string | ✗ | `default` | `default` or `flex` |
+| `callback_url` | string | ✗ | — | URL invoked when task finishes |
+| `safety_identifier` | string | ✗ | — | End-user ID for safety auditing (≤64 chars) |
+
+#### Content array schema
+
+Each element is an object with a `type` discriminator (OpenAI-style multimodal):
+
+| `type` | Fields | Notes |
+|--------|--------|-------|
+| `text` | `text: string` | The prompt |
+| `image_url` | `image_url: { url: string }`, optional `role: "first_frame"\|"last_frame"\|"reference_image"` | Use `asset://` URIs to reference registered assets |
+| `video_url` | `video_url: { url: string }` | Reference video (Seedance multi-modal) |
+| `audio_url` | `audio_url: { url: string }` | Reference audio (Seedance multi-modal) |
+
+Seedance 2.0 multi-modal accepts 1–9 reference images, 1–3 reference videos, 1–3 reference audios in one request.
+
+#### Examples
+
+Text-to-video:
+
 ```bash
 curl -s "$XRTOKEN_BASE_URL/v1/videos/generations" \
   -H "Authorization: Bearer $XRTOKEN_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "doubao-seedance-2.0",
-    "prompt": "video description",
-    "duration": 5
+    "model": "volcengine/doubao-seedance-2-0-260128",
+    "content": [{"type": "text", "text": "a corgi running on the beach at sunset"}],
+    "resolution": "1080p",
+    "ratio": "16:9",
+    "duration": 5,
+    "generate_audio": true
   }'
-# Returns: {"id": "task_xxx", "status": "queued"}
 ```
 
-Input modes: text-to-video (`prompt`), image-to-video (`content` array with `first_frame`/`last_frame` roles), or multi-modal (images + videos + audio). Set `"generate_audio": true` for audio-enabled models.
+Image-to-video (first frame → animate):
+
+```bash
+curl -s "$XRTOKEN_BASE_URL/v1/videos/generations" \
+  -H "Authorization: Bearer $XRTOKEN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "volcengine/doubao-seedance-2-0-260128",
+    "content": [
+      {"type": "text", "text": "the character waves and smiles"},
+      {"type": "image_url", "image_url": {"url": "https://..."}, "role": "first_frame"}
+    ],
+    "duration": 5
+  }'
+```
+
+First + last frame interpolation:
+
+```json
+{
+  "model": "volcengine/doubao-seedance-2-0-260128",
+  "content": [
+    {"type": "text", "text": "smooth transition between frames"},
+    {"type": "image_url", "image_url": {"url": "asset://ref-start"}, "role": "first_frame"},
+    {"type": "image_url", "image_url": {"url": "asset://ref-end"},   "role": "last_frame"}
+  ]
+}
+```
+
+Response (200):
+
+```json
+{
+  "id": "task_xxx",
+  "upstream_id": "...",
+  "model": "volcengine/doubao-seedance-2-0-260128",
+  "status": "queued",
+  "created_at": "2026-05-08T06:30:00Z"
+}
+```
 
 ### Query status (GET /v1/videos/generations/{taskId})
 
@@ -119,7 +195,28 @@ curl -s "$XRTOKEN_BASE_URL/v1/videos/generations/$TASK_ID" \
   -H "Authorization: Bearer $XRTOKEN_API_KEY"
 ```
 
-Status flow: `queued` → `processing` → `succeeded`/`failed`. On success, response includes `video_url` and `duration`.
+Status flow: `queued` → `processing` → `succeeded` / `failed` / `cancelled` / `expired`.
+
+Response fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Task ID |
+| `model` | string | Model used |
+| `status` | string | `queued` / `processing` / `succeeded` / `failed` / `expired` / `cancelled` |
+| `video_url` | string | Result URL (when `succeeded`) |
+| `last_frame_url` | string | Last-frame URL (if `return_last_frame: true`) |
+| `duration` | integer | Actual duration in seconds |
+| `frames` | integer | Total frames generated |
+| `resolution` | string | Actual output resolution |
+| `ratio` | string | Actual output aspect ratio |
+| `seed` | integer | Seed used |
+| `generate_audio` | boolean | Whether audio was generated |
+| `service_tier` | string | Tier used |
+| `draft` | boolean | Whether result is a draft |
+| `usage` | object | `{completion_tokens, total_tokens}` — for billing |
+| `error` | object | `{code, message}` — present when `status: "failed"` |
+| `created_at` / `updated_at` | string | ISO 8601 timestamps |
 
 ### Cancel task (DELETE /v1/videos/generations/{taskId})
 
@@ -127,6 +224,8 @@ Status flow: `queued` → `processing` → `succeeded`/`failed`. On success, res
 curl -s -X DELETE "$XRTOKEN_BASE_URL/v1/videos/generations/$TASK_ID" \
   -H "Authorization: Bearer $XRTOKEN_API_KEY"
 ```
+
+Only effective while `status` is `queued` or `processing`.
 
 ## Model Listing
 
