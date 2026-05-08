@@ -20,8 +20,16 @@ module.exports = async function videoGet(opts) {
   if (res.ratio) log.info(`ratio:      ${res.ratio}`);
   if (res.video_url) log.info(`video_url:  ${res.video_url}`);
   if (res.last_frame_url) log.info(`last_frame: ${res.last_frame_url}`);
-  if (res.error) log.error(`error: ${res.error.code} ${res.error.message}`);
+  if (res.error) log.error(`error: ${formatError(res.error)}`);
 };
+
+function formatError(err) {
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    return [err.code, err.message].filter(Boolean).join(' ') || JSON.stringify(err);
+  }
+  return String(err);
+}
 
 const HELP = `xrtoken video get — query single task
   --task-id <id>     Task to query (required)

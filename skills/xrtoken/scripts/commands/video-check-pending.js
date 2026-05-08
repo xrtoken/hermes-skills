@@ -42,7 +42,7 @@ module.exports = async function videoCheckPending(opts) {
       if (!opts.json) log.ok(`${t.id}\tsucceeded\t${local}`);
       notify({ title: 'XRToken video ready', message: `${t.id}\n${local}` });
     } else if (!opts.json) {
-      log.warn(`${t.id}\t${cur.status}${cur.error ? ' ' + cur.error.message : ''}`);
+      log.warn(`${t.id}\t${cur.status}${cur.error ? ' ' + formatError(cur.error) : ''}`);
     }
     tasks.remove(t.id);
     completed.push(cur);
@@ -50,6 +50,14 @@ module.exports = async function videoCheckPending(opts) {
 
   if (opts.json) log.json({ checked: pending.length, completed });
 };
+
+function formatError(err) {
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    return [err.code, err.message].filter(Boolean).join(' ') || JSON.stringify(err);
+  }
+  return String(err);
+}
 
 const HELP = `xrtoken video check-pending — poll all pending video tasks; auto-download succeeded
   --json
