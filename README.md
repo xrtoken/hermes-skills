@@ -14,8 +14,8 @@ Hermes Agent skills for [XRToken](https://xrtoken.ai) — the AI API gateway wit
 # Add this repo as a skill source
 hermes skills tap add https://github.com/xrtoken/hermes-skills
 
-# Install a skill
-hermes skills install xrtoken
+# Install the skill (--force required: API wrapper skills trigger security scan)
+hermes skills install xrtoken/hermes-skills/skills/xrtoken --force
 ```
 
 ## Setup
