@@ -1,0 +1,27 @@
+{
+  "_comment": "Drop into ~/.openclaw/cron.json (or merge into existing). OpenClaw will run check-pending every 2 minutes; completed tasks auto-download and (with --notify) raise a desktop notification.",
+  "jobs": [
+    {
+      "name": "xrtoken-video-check",
+      "schedule": "*/2 * * * *",
+      "command": "node",
+      "args": [
+        "${HOME}/.openclaw/skills/xrtoken/scripts/xrtoken.js",
+        "video",
+        "check-pending",
+        "--notify"
+      ]
+    },
+    {
+      "name": "xrtoken-image-check",
+      "schedule": "*/2 * * * *",
+      "command": "node",
+      "args": [
+        "${HOME}/.openclaw/skills/xrtoken/scripts/xrtoken.js",
+        "image",
+        "check-pending",
+        "--notify"
+      ]
+    }
+  ]
+}

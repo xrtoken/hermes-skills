@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS launchd template — checks pending XRToken tasks every 2 minutes.
+
+  Install:
+    cp examples/launchd.plist ~/Library/LaunchAgents/ai.xrtoken.check-pending.plist
+    # Edit the absolute paths below before loading
+    launchctl load ~/Library/LaunchAgents/ai.xrtoken.check-pending.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/ai.xrtoken.check-pending.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ai.xrtoken.check-pending</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/node</string>
+        <string>/ABSOLUTE/PATH/TO/xrtoken-skills/skills/xrtoken/scripts/xrtoken.js</string>
+        <string>video</string>
+        <string>check-pending</string>
+        <string>--notify</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>120</integer>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>XRTOKEN_NOTIFY</key>
+        <string>1</string>
+        <!-- Set XRTOKEN_API_KEY here OR rely on ~/.hermes/.env / ~/.claude/settings.json -->
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/xrtoken-check.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/xrtoken-check.err.log</string>
+</dict>
+</plist>

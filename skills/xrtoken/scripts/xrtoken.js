@@ -84,6 +84,9 @@ async function main() {
   }
 
   const opts = parseArgs(rest);
+  if (opts.notify !== undefined) {
+    require('./lib/notify').setEnabled(Boolean(opts.notify));
+  }
   const handler = COMMANDS[ns][cmd]();
   try {
     await handler(opts);

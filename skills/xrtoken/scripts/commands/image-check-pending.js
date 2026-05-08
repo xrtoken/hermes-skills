@@ -3,6 +3,7 @@
 const { clientFromOpts } = require('../lib/client');
 const tasks = require('../lib/tasks');
 const { downloadTo, inferExt } = require('../lib/download');
+const { notify } = require('../lib/notify');
 const log = require('../lib/log');
 
 const TERMINAL = new Set(['succeeded', 'failed', 'cancelled', 'expired']);
@@ -41,6 +42,9 @@ module.exports = async function imageCheckPending(opts) {
         if (!opts.json) log.ok(`${t.id}\tsucceeded\t${local}`);
       }
       cur._localPaths = locals;
+      if (locals.length) {
+        notify({ title: 'XRToken image ready', message: `${t.id}\n${locals[0]}` });
+      }
     } else if (!opts.json) {
       log.warn(`${t.id}\t${cur.status}${cur.error ? ' ' + cur.error.message : ''}`);
     }

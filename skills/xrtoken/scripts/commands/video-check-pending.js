@@ -3,6 +3,7 @@
 const { clientFromOpts } = require('../lib/client');
 const tasks = require('../lib/tasks');
 const { downloadTo, inferExt } = require('../lib/download');
+const { notify } = require('../lib/notify');
 const log = require('../lib/log');
 
 const TERMINAL = new Set(['succeeded', 'failed', 'cancelled', 'expired']);
@@ -39,6 +40,7 @@ module.exports = async function videoCheckPending(opts) {
       });
       cur._localPath = local;
       if (!opts.json) log.ok(`${t.id}\tsucceeded\t${local}`);
+      notify({ title: 'XRToken video ready', message: `${t.id}\n${local}` });
     } else if (!opts.json) {
       log.warn(`${t.id}\t${cur.status}${cur.error ? ' ' + cur.error.message : ''}`);
     }

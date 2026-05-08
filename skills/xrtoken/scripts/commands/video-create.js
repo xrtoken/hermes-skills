@@ -133,6 +133,10 @@ async function pollUntilDone(api, taskId, opts) {
         });
         if (!opts.json) log.ok(`  saved: ${local}`);
         cur._localPath = local;
+        require('../lib/notify').notify({
+          title: 'XRToken video ready',
+          message: `${taskId}\n${local}`,
+        });
       }
       require('../lib/tasks').remove(taskId);
       return cur;

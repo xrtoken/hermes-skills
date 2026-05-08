@@ -1,0 +1,22 @@
+# Hermes-style application-level cron config.
+# Place under your Hermes config directory and reference from your agent
+# definition. The schedule field accepts cron expressions or natural
+# language like "every 2 minutes".
+schedules:
+  - name: xrtoken-video-check
+    schedule: every 2 minutes
+    command: node
+    args:
+      - ${HERMES_SKILLS_DIR}/xrtoken/scripts/xrtoken.js
+      - video
+      - check-pending
+      - --notify
+
+  - name: xrtoken-image-check
+    schedule: every 2 minutes
+    command: node
+    args:
+      - ${HERMES_SKILLS_DIR}/xrtoken/scripts/xrtoken.js
+      - image
+      - check-pending
+      - --notify

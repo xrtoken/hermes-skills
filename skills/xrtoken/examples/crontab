@@ -1,0 +1,8 @@
+# Linux/macOS crontab — run check-pending every 2 minutes.
+# Install:  crontab -e   (then paste the line below, adjusting paths)
+#
+# The skill needs XRTOKEN_API_KEY available; if you keep it in ~/.hermes/.env
+# the wrapper will pick it up automatically — no need to set it here.
+
+*/2 * * * *  /usr/local/bin/node /ABSOLUTE/PATH/TO/xrtoken-skills/skills/xrtoken/scripts/xrtoken.js video check-pending --notify >> /tmp/xrtoken-check.log 2>&1
+*/2 * * * *  /usr/local/bin/node /ABSOLUTE/PATH/TO/xrtoken-skills/skills/xrtoken/scripts/xrtoken.js image check-pending --notify >> /tmp/xrtoken-check.log 2>&1
