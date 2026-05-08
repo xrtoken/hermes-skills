@@ -1,303 +1,293 @@
 ---
 name: xrtoken
-description: "Generate images and videos via XRToken API (OpenAI-compatible). Use when creating AI-generated images, videos, or checking available models on xrtoken.ai. Requires XRTOKEN_API_KEY and XRTOKEN_BASE_URL env vars."
-version: 1.0.1
+description: "XRToken AI 图像/视频生成 Skill。支持文生图/图生图、文生视频/图生视频/参考视频音频/首尾帧。当用户说\"生图\"、\"画图\"、\"生视频\"、\"生成视频\"、\"做个视频\"、\"seedance\"、\"seedream\"、\"xrtoken\" 时激活。OpenAI 兼容网关，50+ 模型。"
+version: 2.0.0
 author: XRToken
 license: MIT
 prerequisites:
   env_vars: [XRTOKEN_API_KEY, XRTOKEN_BASE_URL]
-  commands: [curl]
+  commands: [node]
 metadata:
   hermes:
-    tags: [image-generation, video-generation, AI-models, OpenAI-compatible, API]
+    tags: [image-generation, video-generation, AI-models, OpenAI-compatible, seedance, seedream]
 ---
 
-# XRToken — AI Image & Video Generation
+# XRToken — AI 图像 & 视频生成
 
-Generate images and videos through XRToken's OpenAI-compatible API gateway (50+ models including Seedream, Seedance, Kling, and more). All endpoints use `Authorization: Bearer` auth.
+通过 XRToken OpenAI 兼容网关调用 50+ 模型（Seedream、Seedance、Kling 等）。本 skill 提供 wrapper 脚本 `scripts/xrtoken.js`，零依赖（只用 Node 内置模块），支持自然语言参数提取、智能模型路由、本地文件自动 base64、异步任务持久化、结果自动下载。
 
 **Docs:** https://xrtoken.ai/docs/en
 
-## When to use
+## 触发关键词
 
-- User asks to generate AI images or videos
-- User needs to list available image/video models and their pricing
-- User wants to create image variations (img2img)
-- User needs to register canonical images as assets for consistent generation
+用户说以下词时激活：
+- 图：生图、画图、生成图片、做张图、seedream
+- 视频：生视频、生成视频、视频生成、做个视频、seedance
+- 模型：xrtoken、列模型、有哪些模型
 
-Don't use for text/chat — use the OpenAI-compatible chat endpoint directly.
-
-## Setup
-
-Add to `~/.hermes/.env`:
+## 核心命令
 
 ```bash
-XRTOKEN_BASE_URL=https://api.xrtoken.ai          # international
-# XRTOKEN_BASE_URL=https://api.xrtoken.net        # China domestic
-XRTOKEN_API_KEY=tr-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# 视频
+node scripts/xrtoken.js video create        --prompt "..."     # 提交任务
+node scripts/xrtoken.js video check-pending                    # 轮询所有 pending，自动下载
+node scripts/xrtoken.js video get           --task-id cgt-xxx
+node scripts/xrtoken.js video list          --filter-status processing
+node scripts/xrtoken.js video delete        --task-id cgt-xxx
+
+# 图片
+node scripts/xrtoken.js image create        --prompt "..."     # 同步生成
+node scripts/xrtoken.js image edit          --prompt "..." --image-file path.png
+node scripts/xrtoken.js image async-create  --prompt "..."     # Pro 模型异步
+node scripts/xrtoken.js image check-pending
+
+# 模型 / 资产
+node scripts/xrtoken.js models list --type video
+node scripts/xrtoken.js asset  list --group-id xxx
+node scripts/xrtoken.js asset  create --name ref-01 --image-file path.jpg
 ```
 
-Get an API key at https://xrtoken.ai/dashboard → API Keys. Keys use `tr-` prefix.
+任何子命令加 `--help` 看完整选项。
 
-Verify setup:
+## 视频生成参数
+
+| CLI flag | 类型 | 默认 | 说明 |
+|----------|------|------|------|
+| `--prompt` | string | — | **必填**。视频描述 |
+| `--duration` | int | 5 | 时长（秒）。范围因模型而异 |
+| `--ratio` | string | adaptive | `16:9`/`9:16`/`1:1`/`4:3`/`3:4`/`21:9`/`adaptive` |
+| `--resolution` | string | 720p | `480p`/`720p`/`1080p` |
+| `--generate-audio` / `--no-generate-audio` | bool | true | 是否生成音频 |
+| `--camera-fixed` | bool | false | 固定镜头视角 |
+| `--watermark` | bool | false | 添加水印 |
+| `--return-last-frame` | bool | false | 返回尾帧（用于长视频拼接） |
+| `--service-tier` | string | default | `default`/`flex`（flex 离线成本约 -50%） |
+| `--seed` | int | -1 | 随机种子，复现用 |
+| `--draft` | bool | false | 样片预览模式（仅 1.5-pro 支持） |
+| `--model` | string | 自动 | 模型 ID 或别名（`2.0`/`2.0-fast`/`1.5-pro`） |
+| `--image-file` (可重复) | path | — | 本地图片，自动 base64 |
+| `--image-url` (可重复) | url | — | 在线图片（http/https/asset:// 都行） |
+| `--video-file` / `--video-url` (可重复) | path/url | — | 参考视频 |
+| `--audio-file` / `--audio-url` (可重复) | path/url | — | 参考音频 |
+| `--callback-url` | url | — | 任务完成回调 |
+| `--safety-identifier` | string | — | 终端用户标识（≤64 字符） |
+| `--wait` | bool | false | 阻塞等待完成并自动下载 |
+| `--poll-seconds` | int | 10 | `--wait` 时轮询间隔 |
+| `--timeout-seconds` | int | 1800 | `--wait` 时总超时 |
+| `--api-key` | string | — | 覆盖凭据查找 |
+| `--base-url` | url | — | 覆盖 base URL（如切国内） |
+| `--dry-run` | bool | false | 打印请求体，不调 API |
+| `--json` | bool | false | 原始 JSON 输出 |
+
+## 图片生成参数
+
+| CLI flag | 默认 | 说明 |
+|----------|------|------|
+| `--prompt` | — | **必填** |
+| `--model` | lite | `lite`（同步）/ `pro`（自动转 async） |
+| `--n` | 1 | 生成数量 |
+| `--size` | — | `1024x1024` 等 |
+| `--seed` | — | 随机种子 |
+| `--response-format` | url | `url` 或 `b64_json` |
+| `--image-file` / `--image-url` | — | `image edit` 子命令必填 |
+| `--mask-url` | — | `image edit` 蒙版 |
+| `--no-download` | — | 关闭自动下载 |
+| `--force-sync` | — | 强制同步端点（即使 pro 模型） |
+
+## 自然语言参数提取
+
+Wrapper 自动从 `--prompt` 中提取（**CLI flag 始终优先**）：
+
+| 用户说 | 自动设 |
+|--------|--------|
+| "5秒"、"10秒"、"15s" | `--duration` |
+| "竖屏"、"手机" | `--ratio 9:16` |
+| "横屏"、"电脑"、"宽屏" | `--ratio 16:9` |
+| "方形"、"正方形" | `--ratio 1:1` |
+| "1080p"、"超清"、"2k" | `--resolution 1080p` |
+| "720p"、"高清" | `--resolution 720p` |
+| "480p"、"标清" | `--resolution 480p` |
+| "不要声音"、"静音" | `--no-generate-audio` |
+| "固定镜头" | `--camera-fixed` |
+| "样片"、"预览"、"草稿" | `--draft`（路由到 1.5-pro） |
+| "低成本"、"离线" | `--service-tier flex` |
+| "快速"、"快点"、"加急" | 模型路由到 2.0-fast |
+| "高质量"、"专业版" | 模型路由到 2.0 标准 |
+| "联网搜索"、"实时" | `--enable-web-search` |
+| "seed=12345" | `--seed 12345` |
+
+## 智能模型路由
+
+| 用户意图 | 自动选 | 原因 |
+|----------|--------|------|
+| 1080p / 高清 | Seedance 2.0 | fast 不支持 1080p |
+| 快速 / fast | Seedance 2.0-fast | 速度优先 |
+| 样片 / 预览 / draft | Seedance 1.5-pro | 仅它支持样片 |
+| flex / 离线 / 低成本 | Seedance 1.5-pro | 仅它支持离线 |
+| 传图/视频/音频参考 | Seedance 2.0 / 2.0-fast | 1.5-pro 不支持多模态 |
+| 默认 | Seedance 2.0 | 功能最全 |
+| 图片：默认 | Seedream lite（同步） | 速度快 |
+| 图片：高质量/专业 | Seedream pro（自动 async） | 细节更好 |
+
+模型 ID 可通过环境变量覆盖：`XRTOKEN_VIDEO_STANDARD` / `XRTOKEN_VIDEO_FAST` / `XRTOKEN_VIDEO_PRO` / `XRTOKEN_IMAGE_LITE` / `XRTOKEN_IMAGE_PRO`。
+
+## 多模态自动模式
+
+根据传入文件数自动选模式（**Agent 不需要预处理 base64**，直接传路径）：
+
+| 输入 | 自动模式 | 示例 |
+|------|---------|------|
+| 纯文本 | 文生视频 | `--prompt "..."` |
+| 1 图 + 文 | 首帧生视频 | `--image-file a.jpg` |
+| 2 图 + 文 | 首尾帧 | `--image-file start.jpg --image-file end.jpg` |
+| ≥3 图 + 文 | 参考图 | 多个 `--image-file` |
+| 视频 + 文 | 参考视频 | `--video-file ref.mp4` |
+| 音频 + 文 | 参考音频 | `--audio-file ref.mp3` |
+| 混合 | Seedance 2.0 多模态 | 任意组合（1-9 图 + 1-3 视频 + 1-3 音频） |
+
+## 典型场景
+
+### 1. 简单文生视频
 
 ```bash
-curl -s "$XRTOKEN_BASE_URL/v1/models" | head -c 200
+node scripts/xrtoken.js video create \
+  --prompt "小猫在草地奔跑，阳光明媚，5秒，720p"
 ```
+NL 提取 → `duration=5, resolution=720p`。
 
-Should return a JSON model list. No auth required for model listing.
-
-## Image Generation
-
-### Generate images (POST /v1/images/generations)
-
-Synchronous. Returns image URLs directly.
+### 2. 首帧生视频
 
 ```bash
-curl -s "$XRTOKEN_BASE_URL/v1/images/generations" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model": "doubao-seedream-5.0-lite", "prompt": "describe your image", "n": 1}'
+node scripts/xrtoken.js video create \
+  --prompt "日落海边，海鸥飞过，温暖治愈，8秒" \
+  --image-file /path/to/start.jpg
 ```
 
-Parameters: `model` (required), `prompt` (required), `n` (default 1), `size` (e.g. `"1024x1024"`).
-
-Response: `{"data": [{"url": "https://..."}]}`. Billed per-image.
-
-### Async image tasks (POST /v1/images/async)
-
-For long-running models like `doubao-seedream-5.0-pro`:
+### 3. 首尾帧过渡
 
 ```bash
-# Submit
-curl -s -X POST "$XRTOKEN_BASE_URL/v1/images/async" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model": "doubao-seedream-5.0-pro", "prompt": "..."}'
-# Returns: {"id": "task_xxx", "status": "queued"}
-
-# Poll until done
-curl -s "$XRTOKEN_BASE_URL/v1/images/async/$TASK_ID" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY"
+node scripts/xrtoken.js video create \
+  --prompt "日出到日落的时间流逝，10秒" \
+  --image-file /path/start.jpg \
+  --image-file /path/end.jpg
 ```
 
-### Image edit / img2img (POST /v1/images/edits)
+### 4. 低成本离线
 
 ```bash
-curl -s "$XRTOKEN_BASE_URL/v1/images/edits" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model": "doubao-seedream-5.0-lite", "prompt": "what to change", "image_url": "https://..."}'
+node scripts/xrtoken.js video create \
+  --prompt "城市夜景延时，低成本模式，10秒"
+# → 自动选 1.5-pro + service_tier=flex
 ```
 
-Supports `asset://` URIs for registered assets.
-
-## Video Generation
-
-### Create task (POST /v1/videos/generations)
-
-Async. Returns a task ID — poll for results.
-
-#### Request parameters
-
-| Param | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `model` | string | ✓ | — | Video model ID, e.g. `volcengine/doubao-seedance-2-0-260128` |
-| `content` | array | ✓ | — | Multimodal input array (see schema below) |
-| `resolution` | string | ✗ | `720p` | `480p` / `720p` / `1080p` |
-| `ratio` | string | ✗ | `adaptive` | `16:9` / `4:3` / `1:1` / `3:4` / `9:16` / `21:9` / `adaptive` |
-| `duration` | integer | ✗ | `5` | Output length in seconds (range varies by model) |
-| `seed` | integer | ✗ | `-1` | `-1` to `2^32-1`; `-1` = random |
-| `generate_audio` | boolean | ✗ | `true` | Generate matching audio (audio-capable models only) |
-| `return_last_frame` | boolean | ✗ | `false` | Include `last_frame_url` in result |
-| `camera_fixed` | boolean | ✗ | `false` | Lock camera position |
-| `watermark` | boolean | ✗ | `false` | Add provider watermark |
-| `service_tier` | string | ✗ | `default` | `default` or `flex` |
-| `callback_url` | string | ✗ | — | URL invoked when task finishes |
-| `safety_identifier` | string | ✗ | — | End-user ID for safety auditing (≤64 chars) |
-
-#### Content array schema
-
-Each element is an object with a `type` discriminator (OpenAI-style multimodal):
-
-| `type` | Fields | Notes |
-|--------|--------|-------|
-| `text` | `text: string` | The prompt |
-| `image_url` | `image_url: { url: string }`, optional `role: "first_frame"\|"last_frame"\|"reference_image"` | Use `asset://` URIs to reference registered assets |
-| `video_url` | `video_url: { url: string }` | Reference video (Seedance multi-modal) |
-| `audio_url` | `audio_url: { url: string }` | Reference audio (Seedance multi-modal) |
-
-Seedance 2.0 multi-modal accepts 1–9 reference images, 1–3 reference videos, 1–3 reference audios in one request.
-
-#### Examples
-
-Text-to-video:
+### 5. 同步图片
 
 ```bash
-curl -s "$XRTOKEN_BASE_URL/v1/videos/generations" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "volcengine/doubao-seedance-2-0-260128",
-    "content": [{"type": "text", "text": "a corgi running on the beach at sunset"}],
-    "resolution": "1080p",
-    "ratio": "16:9",
-    "duration": 5,
-    "generate_audio": true
-  }'
+node scripts/xrtoken.js image create --prompt "极简风格的山脉插画"
+# 默认 lite 模型，自动下载到 ~/Desktop/XRToken-Outputs/<task-id>/
 ```
 
-Image-to-video (first frame → animate):
+### 6. 图片编辑
 
 ```bash
-curl -s "$XRTOKEN_BASE_URL/v1/videos/generations" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "volcengine/doubao-seedance-2-0-260128",
-    "content": [
-      {"type": "text", "text": "the character waves and smiles"},
-      {"type": "image_url", "image_url": {"url": "https://..."}, "role": "first_frame"}
-    ],
-    "duration": 5
-  }'
+node scripts/xrtoken.js image edit \
+  --prompt "把背景换成星空" \
+  --image-file /path/to/photo.jpg
 ```
 
-First + last frame interpolation:
+## 异步任务管理
 
-```json
-{
-  "model": "volcengine/doubao-seedance-2-0-260128",
-  "content": [
-    {"type": "text", "text": "smooth transition between frames"},
-    {"type": "image_url", "image_url": {"url": "asset://ref-start"}, "role": "first_frame"},
-    {"type": "image_url", "image_url": {"url": "asset://ref-end"},   "role": "last_frame"}
-  ]
-}
-```
-
-Response (200):
-
-```json
-{
-  "id": "task_xxx",
-  "upstream_id": "...",
-  "model": "volcengine/doubao-seedance-2-0-260128",
-  "status": "queued",
-  "created_at": "2026-05-08T06:30:00Z"
-}
-```
-
-### Query status (GET /v1/videos/generations/{taskId})
+提交任务后会写入 `~/.xrtoken/pending-tasks.json`（fallback `./.xrtoken/...`）：
 
 ```bash
-curl -s "$XRTOKEN_BASE_URL/v1/videos/generations/$TASK_ID" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY"
+# 用户问"好了吗"时
+node scripts/xrtoken.js video check-pending
+# → 轮询所有 pending，对 succeeded 自动下载到本地，移出列表
 ```
 
-Status flow: `queued` → `processing` → `succeeded` / `failed` / `cancelled` / `expired`.
+完成的视频/图片自动保存到（三级 fallback）：
 
-Response fields:
+| 优先级 | 路径 |
+|--------|------|
+| 1 | `$XRTOKEN_OUTPUT_DIR`（如设置） |
+| 2 | `~/Desktop/XRToken-Outputs/<task-id>/` |
+| 3 | `~/XRToken-Outputs/<task-id>/` |
+| 4 | `./XRToken-Outputs/<task-id>/` |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | string | Task ID |
-| `model` | string | Model used |
-| `status` | string | `queued` / `processing` / `succeeded` / `failed` / `expired` / `cancelled` |
-| `video_url` | string | Result URL (when `succeeded`) |
-| `last_frame_url` | string | Last-frame URL (if `return_last_frame: true`) |
-| `duration` | integer | Actual duration in seconds |
-| `frames` | integer | Total frames generated |
-| `resolution` | string | Actual output resolution |
-| `ratio` | string | Actual output aspect ratio |
-| `seed` | integer | Seed used |
-| `generate_audio` | boolean | Whether audio was generated |
-| `service_tier` | string | Tier used |
-| `draft` | boolean | Whether result is a draft |
-| `usage` | object | `{completion_tokens, total_tokens}` — for billing |
-| `error` | object | `{code, message}` — present when `status: "failed"` |
-| `created_at` / `updated_at` | string | ISO 8601 timestamps |
+## API Key 与 Base URL 查找
 
-### Cancel task (DELETE /v1/videos/generations/{taskId})
+按优先级（首个命中即用）：
+
+1. **CLI**：`--api-key` / `--base-url`
+2. **Claude Code**：`~/.claude/settings.json` 中 `env.XRTOKEN_API_KEY` / `env.XRTOKEN_BASE_URL`
+3. **OpenClaw**：`~/.openclaw/openclaw.json` 中 `models.providers.<name>` （匹配 name 含 `xrtoken` 或 baseURL 含 `xrtoken.ai|xrtoken.net`）
+4. **Hermes**：`~/.hermes/.env` 中 `XRTOKEN_API_KEY=...` / `XRTOKEN_BASE_URL=...`
+5. **环境变量**：`XRTOKEN_API_KEY` / `XRTOKEN_BASE_URL`
+
+API key 以 `tr-` 开头，从 https://xrtoken.ai/dashboard 获取。
+
+国内域名：`XRTOKEN_BASE_URL=https://api.xrtoken.net`。
+
+## 框架适配建议
+
+### 配合 OpenClaw / 支持 Cron 的框架（推荐）
+
+配置 Cron 每 2 分钟执行一次 `check-pending`，任务完成后自动通知用户：
+
+```yaml
+schedule: every 2 minutes
+command: node scripts/xrtoken.js video check-pending
+```
+
+### 配合 Claude Code / 纯交互式（无 Cron）
+
+策略 A（被动，默认）：提交后告诉用户"约需 3 分钟，问我进度即可"，用户问时再 `check-pending`。
+
+策略 B（阻塞等待）：用户明确要求等待时，加 `--wait`，wrapper 内部轮询并下载完才返回。注意会阻塞当前对话回合。
+
+## Agent 执行规范（大模型必读）
+
+**你不需要：**
+- 自己读取本地文件并 base64 编码
+- 自己上传到图床
+- 自己计算 ratio/resolution/duration
+- 手动 hardcode 模型 ID
+
+**你只需要：**
+- 把用户的本地文件**绝对路径**直接传给 `--image-file` / `--video-file` / `--audio-file`
+- 把用户给的 http/https URL 直接传给 `--image-url` 等
+- 把用户的自然语言 prompt 原封不动传给 `--prompt`，wrapper 会从中提取参数
+- 用户没明确说模型时**不要传 `--model`**，让 wrapper 路由
+
+**输出处理：**
+- 提交后输出格式：`id: cgt-xxx` / `status: queued` —— 转述给用户即可
+- 完成后输出含 `saved: <绝对路径>` —— 把这个路径传给框架的「展示文件」工具给用户
+- 加 `--json` 拿 JSON 时，从 `_localPath` / `_localPaths` 读
+
+## 安装与升级
 
 ```bash
-curl -s -X DELETE "$XRTOKEN_BASE_URL/v1/videos/generations/$TASK_ID" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY"
+# 首次安装
+hermes skills tap add https://github.com/xrtoken/hermes-skills
+hermes skills install xrtoken/hermes-skills/skills/xrtoken --force
+
+# 升级
+hermes skills update xrtoken
 ```
 
-Only effective while `status` is `queued` or `processing`.
+## 常见坑
 
-## Model Listing
+1. **模型名 hardcode**：模型一直在加。用 alias（`2.0`/`pro`/`lite`）或让 wrapper 自动选。
+2. **忘 `/v1` 前缀**：所有端点在 `/v1/` 下，wrapper 已封装。
+3. **Pro 图片用同步端点**：Pro 模型必须 async，wrapper 会自动转。要强制同步用 `--force-sync`（一般会失败）。
+4. **轮询频率太高**：默认 10s 已经合理，不要设小于 5s。
+5. **402 错误**：余额不足，去 https://xrtoken.ai/dashboard 充值。
+6. **Cron 没触发**：是 Agent 框架的应用层 Cron，不是系统 crontab。
 
-```bash
-curl -s "$XRTOKEN_BASE_URL/v1/models"
-```
+## 验证清单
 
-No auth needed. Returns all models with `type` (image/video/text/audio), `price_per_unit` (CNY), and `available` status. Filter in jq:
-
-```bash
-# Image models only
-curl -s "$XRTOKEN_BASE_URL/v1/models" | jq '[.data[] | select(.type=="image")]'
-
-# Video models only
-curl -s "$XRTOKEN_BASE_URL/v1/models" | jq '[.data[] | select(.type=="video")]'
-```
-
-Models are added frequently — always query live instead of hardcoding model names.
-
-## Asset Library
-
-Register canonical reference images for consistent generation:
-
-```bash
-# Create asset
-curl -s -X POST "$XRTOKEN_BASE_URL/v1/assets" \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "reference-01", "url": "https://...", "group_id": "..."}'
-
-# List assets
-curl -s "$XRTOKEN_BASE_URL/v1/assets?group_id=..." \
-  -H "Authorization: Bearer $XRTOKEN_API_KEY"
-```
-
-Reference assets in generation via `"image_url": "asset://..."`.
-
-## Using in Hermes
-
-Prefer `terminal` with curl commands for simple cases. For multi-step workflows, use `execute_code`:
-
-```python
-import os, json, urllib.request
-
-def generate_image(model, prompt, n=1):
-    url = f"{os.environ['XRTOKEN_BASE_URL']}/v1/images/generations"
-    body = json.dumps({"model": model, "prompt": prompt, "n": n}).encode()
-    req = urllib.request.Request(url, data=body, headers={
-        "Authorization": f"Bearer {os.environ['XRTOKEN_API_KEY']}",
-        "Content-Type": "application/json"
-    })
-    return [d["url"] for d in json.loads(urllib.request.urlopen(req).read())["data"]]
-```
-
-## Billing
-
-- **Images**: charged per-image × unit price (CNY) on success
-- **Videos**: estimated cost frozen at submission, settled by actual usage on success; refunded on failure
-- Check pricing with `GET /v1/models` — `price_per_unit` in CNY (万分之一分)
-
-## Common Pitfalls
-
-1. **Hardcoding model names.** Models change. Always run `GET /v1/models` to list current available models before generating.
-2. **Forgetting the `/v1` prefix.** All endpoints are under `/v1/`. The base URL is `https://api.xrtoken.ai`, full path is `/v1/images/generations`.
-3. **Using sync endpoint for Pro models.** `doubao-seedream-5.0-pro` requires the async `/v1/images/async` endpoint — synchronous `/v1/images/generations` will fail or timeout.
-4. **Missing `XRTOKEN_BASE_URL`.** The skill requires both `XRTOKEN_API_KEY` and `XRTOKEN_BASE_URL`. Without `XRTOKEN_BASE_URL`, curl commands will fail.
-5. **Assuming video completes instantly.** Video generation is async. Always poll with `GET /v1/videos/generations/{taskId}` and check `status` before expecting a `video_url`.
-6. **402 errors.** Mean insufficient balance — user needs to top up at https://xrtoken.ai/dashboard.
-
-## Verification Checklist
-
-- [ ] `XRTOKEN_API_KEY` and `XRTOKEN_BASE_URL` set in `~/.hermes/.env`
-- [ ] `curl -s "$XRTOKEN_BASE_URL/v1/models"` returns models
-- [ ] Image generation returns URLs in `data[].url`
-- [ ] Video generation returns a task ID and can be polled to completion
+- [ ] `XRTOKEN_API_KEY` 在 `~/.hermes/.env` / 平台配置 / env 之一
+- [ ] `node scripts/xrtoken.js models list` 返回模型列表
+- [ ] `node scripts/xrtoken.js video create --prompt "test" --dry-run` 输出预期 body
+- [ ] `node scripts/xrtoken.js image create --prompt "测试"` 实际生成并下载
+- [ ] `node scripts/xrtoken.js video create --prompt "测试视频"` 提交后 `video check-pending` 能轮到

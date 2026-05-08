@@ -1,0 +1,13 @@
+{
+  "name": "xrtoken-skill",
+  "version": "2.0.0",
+  "description": "XRToken Hermes skill wrapper — image & video generation",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "xrtoken": "./xrtoken.js"
+  }
+}
