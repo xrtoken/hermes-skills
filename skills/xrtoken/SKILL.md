@@ -1,7 +1,7 @@
 ---
 name: xrtoken
 description: "XRToken AI 图像/视频生成 Skill。支持文生图/图生图、文生视频/图生视频/参考视频音频/首尾帧。当用户说\"生图\"、\"画图\"、\"生视频\"、\"生成视频\"、\"做个视频\"、\"seedance\"、\"seedream\"、\"xrtoken\" 时激活。OpenAI 兼容网关，50+ 模型。"
-version: 2.0.0
+version: 2.1.0
 author: XRToken
 license: MIT
 prerequisites:
@@ -228,15 +228,30 @@ API key 以 `tr-` 开头，从 https://xrtoken.ai/dashboard 获取。
 
 国内域名：`XRTOKEN_BASE_URL=https://api.xrtoken.net`。
 
+## 桌面通知（macOS）
+
+完成时弹通知：加 `--notify` 或设 `XRTOKEN_NOTIFY=1`。Linux/Windows 上自动 no-op，不会报错。
+
+```bash
+node scripts/xrtoken.js video check-pending --notify
+```
+
 ## 框架适配建议
 
 ### 配合 OpenClaw / 支持 Cron 的框架（推荐）
 
-配置 Cron 每 2 分钟执行一次 `check-pending`，任务完成后自动通知用户：
+配置 Cron 每 2 分钟执行一次 `check-pending`，任务完成后自动通知用户。`examples/` 目录下有现成模板：
+
+| 框架 | 模板 |
+|------|------|
+| OpenClaw | `examples/openclaw-cron.json` |
+| Hermes | `examples/hermes-cron.yaml` |
+| macOS launchd | `examples/launchd.plist` |
+| Linux cron | `examples/crontab` |
 
 ```yaml
 schedule: every 2 minutes
-command: node scripts/xrtoken.js video check-pending
+command: node scripts/xrtoken.js video check-pending --notify
 ```
 
 ### 配合 Claude Code / 纯交互式（无 Cron）
@@ -263,6 +278,14 @@ command: node scripts/xrtoken.js video check-pending
 - 提交后输出格式：`id: cgt-xxx` / `status: queued` —— 转述给用户即可
 - 完成后输出含 `saved: <绝对路径>` —— 把这个路径传给框架的「展示文件」工具给用户
 - 加 `--json` 拿 JSON 时，从 `_localPath` / `_localPaths` 读
+
+## 完整 CLI 文档
+
+`docs/CLI.md` 是从每个子命令的 `--help` 自动汇总生成的，可直接查阅。重新生成：
+
+```bash
+node scripts/generate-docs.js
+```
 
 ## 安装与升级
 
