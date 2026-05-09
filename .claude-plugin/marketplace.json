@@ -1,0 +1,17 @@
+{
+  "name": "xrtoken-skills",
+  "owner": {
+    "name": "XRToken",
+    "url": "https://xrtoken.ai"
+  },
+  "plugins": [
+    {
+      "name": "xrtoken",
+      "source": ".",
+      "description": "XRToken AI image and video generation. OpenAI-compatible gateway, 50+ models (Seedream, Seedance, Kling). Includes the seedance-prompt rewriting protocol.",
+      "homepage": "https://xrtoken.ai",
+      "license": "MIT",
+      "keywords": ["image-generation", "video-generation", "seedance", "seedream", "openai-compatible"]
+    }
+  ]
+}

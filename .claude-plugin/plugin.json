@@ -1,0 +1,14 @@
+{
+  "name": "xrtoken",
+  "description": "XRToken AI image and video generation via OpenAI-compatible gateway. Bundles the xrtoken wrapper skill (50+ models, NL parameter extraction, async task management) and the seedance-prompt skill (Seedance 2.0 prompt rewriting rules).",
+  "version": "2.3.0",
+  "author": {
+    "name": "XRToken",
+    "url": "https://xrtoken.ai"
+  },
+  "homepage": "https://xrtoken.ai/docs/en",
+  "repository": "https://github.com/xrtoken/hermes-skills",
+  "license": "MIT",
+  "keywords": ["image-generation", "video-generation", "seedance", "seedream", "kling", "openai-compatible"],
+  "skills": "skills"
+}
